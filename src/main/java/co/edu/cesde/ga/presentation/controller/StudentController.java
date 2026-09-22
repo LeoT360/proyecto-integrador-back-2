@@ -3,8 +3,6 @@ package co.edu.cesde.ga.presentation.controller;
 import co.edu.cesde.ga.application.dto.request.CreateStudentRequestDto;
 import co.edu.cesde.ga.application.dto.response.CreateStudentResponseDto;
 import co.edu.cesde.ga.application.repository.StudentRepository;
-import co.edu.cesde.ga.domain.exceptions.StudentAlreadyExistsException;
-import co.edu.cesde.ga.domain.exceptions.StudentNotFoundException;
 import co.edu.cesde.ga.domain.models.Student;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -26,86 +24,44 @@ public class StudentController {
 
     @GetMapping
     public ResponseEntity<Object> getStudents() {
-        try {
-            var students = studentService.findAll();
-
-            var response = students.stream()
-                    .map(CreateStudentResponseDto::fromStudent)
-                    .toList();
-
-            return ResponseEntity.status(HttpStatus.OK).body(response);
-
-        } catch (Exception e) {
-            System.out.println("Unexpected error getting students: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        var students = studentService.findAll();
+        return ResponseEntity.ok(students);
     }
 
     @PostMapping
     public ResponseEntity<Object> createStudent(@Valid @RequestBody CreateStudentRequestDto student) {
-        try {
-            Student createdStudent = studentService.save(new Student(
-                    student.id(),
-                    student.firstName(),
-                    student.lastName(),
-                    student.email(),
-                    student.birthDate()
-            ));
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdStudent);
-        } catch (StudentAlreadyExistsException e) {
-            System.out.println("Error creating student: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        } catch (Exception e) {
-            System.out.println("Unexpected error creating student: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        var createStudentDto = new CreateStudentResponseDto(
+                student.id(),
+                student.firstName(),
+                student.lastName(),
+                student.email(),
+                student.enrollmentStatus()
+        );
+
+        Student createdStudent = studentService.save(createStudentDto);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(CreateStudentResponseDto.fromStudent(createdStudent));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deleteStudent(@Valid @Min(1) @PathVariable Long id) {
-        try {
-            studentService.deleteById(id);
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        } catch (StudentNotFoundException e) {
-            System.out.println("Error deleting student: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        } catch (Exception e) {
-            System.out.println("Unexpected error deleting student: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        studentService.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Object> getStudent(@Valid @Min(1) @PathVariable Long id) {
-        try {
-            Student student = studentService.findById(id);
+        Student student = studentService.findById(id);
 
-            return ResponseEntity
-                    .status(HttpStatus.OK)
-                    .body(CreateStudentResponseDto.fromStudent(student));
-
-        } catch (StudentNotFoundException e) {
-            System.out.println("Error finding student: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-
-        } catch (Exception e) {
-            System.out.println("Unexpected error finding student: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        return ResponseEntity.ok(CreateStudentResponseDto.fromStudent(student));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Object> updateStudent(@Valid @PathVariable Long id, @RequestBody Student student) {
-        try {
-            student.setId(id);
-            Student updatedStudent = studentService.save(student);
-            return ResponseEntity.status(HttpStatus.CREATED).body(updatedStudent);
-        } catch (StudentNotFoundException e) {
-            System.out.println("Error updating student: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        } catch (Exception e) {
-            System.out.println("Unexpected error updating student: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    public ResponseEntity<Object> updateStudent(@Valid @Min(1) @PathVariable Long id, @Valid @RequestBody Student student) {
+
+        student.setId(id);
+        Student updatedStudent = studentService.update(student);
+
+        return ResponseEntity.ok(CreateStudentResponseDto.fromStudent(updatedStudent));
     }
 }

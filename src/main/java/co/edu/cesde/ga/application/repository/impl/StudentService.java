@@ -1,5 +1,6 @@
 package co.edu.cesde.ga.application.repository.impl;
 
+import co.edu.cesde.ga.application.dto.response.CreateStudentResponseDto;
 import co.edu.cesde.ga.application.repository.StudentRepository;
 import co.edu.cesde.ga.domain.exceptions.StudentAlreadyExistsException;
 import co.edu.cesde.ga.domain.exceptions.StudentNotFoundException;
@@ -7,6 +8,7 @@ import co.edu.cesde.ga.domain.models.Student;
 import co.edu.cesde.ga.infrastructure.repository.StudentJpaRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -19,16 +21,25 @@ public class StudentService implements StudentRepository {
     }
 
     @Override
-    public Student save(Student student) {
+    public Student save(CreateStudentResponseDto student) {
         if (student == null) {
             throw new IllegalArgumentException("Student cannot be null");
         }
 
-        if (studentRepository.existsById((student.getId()))) {
-            throw new StudentAlreadyExistsException(student.getId());
+        if (studentRepository.existsById((student.id()))) {
+            throw new StudentAlreadyExistsException(student.id());
         }
 
-        return studentRepository.save(student);
+        var newStudent = new Student();
+        newStudent.setId(student.id());
+        newStudent.setFirstName(student.firstName());
+        newStudent.setLastName(student.lastName());
+        newStudent.setEmail(student.email());
+        newStudent.setEnrollmentStatus(student.enrollmentStatus());
+        newStudent.setCreatedAt(LocalDateTime.now());
+        newStudent.setUpdatedAt(LocalDateTime.now());
+
+        return studentRepository.save(newStudent);
     }
 
     @Override

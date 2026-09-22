@@ -3,8 +3,6 @@ package co.edu.cesde.ga.presentation.controller;
 import co.edu.cesde.ga.application.dto.request.CreateEnrollmentRequestDto;
 import co.edu.cesde.ga.application.dto.response.CreateEnrollmentResponseDto;
 import co.edu.cesde.ga.application.repository.EnrollmentRepository;
-import co.edu.cesde.ga.domain.exceptions.EnrollmentAlreadyExistsException;
-import co.edu.cesde.ga.domain.exceptions.EnrollmentNotFoundException;
 import co.edu.cesde.ga.domain.models.Enrollment;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -26,103 +24,42 @@ public class EnrollmentController {
 
     @GetMapping
     public ResponseEntity<Object> getEnrollments() {
-        try {
-            var enrollments = enrollmentService.findAll();
-
-            var response = enrollments.stream()
-                    .map(CreateEnrollmentResponseDto::fromEnrollment)
-                    .toList();
-
-            return ResponseEntity.status(HttpStatus.OK).body(response);
-
-        } catch (Exception e) {
-            System.out.println("Unexpected error getting enrollments: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        var enrollments = enrollmentService.findAll();
+        return ResponseEntity.ok(enrollments);
     }
 
     @PostMapping
     public ResponseEntity<Object> createEnrollment(@Valid @RequestBody CreateEnrollmentRequestDto enrollment) {
+        Enrollment createdEnrollment = enrollmentService.save(new Enrollment(
+                enrollment.studentId(),
+                enrollment.courseId(),
+                enrollment.enrollmentDate(),
+                null
+        ));
 
-        try {
-            Enrollment createdEnrollment = enrollmentService.save(new Enrollment(
-                    enrollment.studentId(),
-                    enrollment.courseId(),
-                    enrollment.enrollmentDate(),
-                    null
-            ));
-
-            return ResponseEntity
-                    .status(HttpStatus.CREATED)
-                    .body(CreateEnrollmentResponseDto.fromEnrollment(createdEnrollment));
-
-        } catch (EnrollmentAlreadyExistsException e) {
-            System.out.println("Error creating enrollment: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-
-        } catch (Exception e) {
-            System.out.println("Unexpected error creating enrollment: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(CreateEnrollmentResponseDto.fromEnrollment(createdEnrollment));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> deleteEnrollment(@PathVariable @NotBlank String id) {
-
-        try {
-            enrollmentService.deleteById(id);
-
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-
-        } catch (EnrollmentNotFoundException e) {
-            System.out.println("Error deleting enrollment: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-
-        } catch (Exception e) {
-            System.out.println("Unexpected error deleting enrollment: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        enrollmentService.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Object> getEnrollment(@PathVariable @NotBlank String id) {
+        Enrollment enrollment = enrollmentService.findById(id);
 
-        try {
-            Enrollment enrollment = enrollmentService.findById(id);
-
-            return ResponseEntity
-                    .status(HttpStatus.OK)
-                    .body(CreateEnrollmentResponseDto.fromEnrollment(enrollment));
-
-        } catch (EnrollmentNotFoundException e) {
-            System.out.println("Error finding enrollment: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-
-        } catch (Exception e) {
-            System.out.println("Unexpected error finding enrollment: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        return ResponseEntity
+                .ok(CreateEnrollmentResponseDto.fromEnrollment(enrollment));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Object> updateEnrollment(@PathVariable @NotBlank String id, @RequestBody Enrollment enrollment) {
+    public ResponseEntity<Object> updateEnrollment(@PathVariable @NotBlank String id, @Valid @RequestBody Enrollment enrollment) {
 
-        try {
-            enrollment.setId(id);
+        enrollment.setId(id);
+        Enrollment updatedEnrollment = enrollmentService.update(enrollment);
 
-            Enrollment updatedEnrollment = enrollmentService.update(enrollment);
-
-            return ResponseEntity
-                    .status(HttpStatus.OK)
-                    .body(CreateEnrollmentResponseDto.fromEnrollment(updatedEnrollment));
-
-        } catch (EnrollmentNotFoundException e) {
-            System.out.println("Error updating enrollment: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-
-        } catch (Exception e) {
-            System.out.println("Unexpected error updating enrollment: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        return ResponseEntity.ok(CreateEnrollmentResponseDto.fromEnrollment(updatedEnrollment));
     }
 }
